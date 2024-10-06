@@ -3,156 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notes Table</title>
+    <title>Sticky Notes</title>
     <style>
-        .add-note-btn { margin: 20px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; font-size: 16px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; }
-        th { background-color: #f2f2f2; text-align: left; }
-        .date-input { width: 100%; padding: 5px; box-sizing: border-box; }
-        .expired { background-color: #ffcccc; color: black; }
-        .warning { background-color: #ffebcc; color: black; }
-        .safe { background-color: #ccffcc; color: black; }
-        .hidden { display: none; }
-        .delete-btn { background-color: #f44336; color: white; border: none; cursor: pointer; padding: 5px 10px; }
-        .collapse-btn { background-color: #4CAF50; color: white; border: none; cursor: pointer; padding: 5px 10px; margin-top: 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+        }
+        .note {
+            background-color: #ffeb3b;
+            width: 200px;
+            height: 200px;
+            margin: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .note textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: none;
+            resize: none;
+            font-size: 16px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .note .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            font-size: 14px;
+        }
+        .add-note-btn {
+            margin: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
     </style>
 </head>
-<body onload="checkAllExpirations()">
+<body>
     <button class="add-note-btn" onclick="addNote()">Add Note</button>
-    <table>
-        <thead>
-            <tr><th>Start Date</th><th>Description</th><th>Expire Date</th><th>Last Modified</th><th>Actions</th></tr>
-        </thead>
-        <tbody id="notesTable"></tbody>
-    </table>
 
-    <button class="collapse-btn" onclick="toggleHiddenNotes()">Show Hidden Notes</button>
-    <div id="hiddenNotesSection" style="display: none;">
-        <h2>Hidden Notes</h2>
-        <table>
-            <thead>
-                <tr><th>Start Date</th><th>Description</th><th>Expire Date</th><th>Last Modified</th><th>Actions</th></tr>
-            </thead>
-            <tbody id="hiddenNotesTable"></tbody>
-        </table>
-    </div>
-
-    <!-- Add Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
     <script>
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        document.addEventListener('DOMContentLoaded', loadNotes);
 
         function addNote() {
-            const table = document.getElementById('notesTable');
-            const newRow = document.createElement('tr');
-            const today = new Date().toISOString().split('T');
-            newRow.innerHTML = `
-                <td><input type="date" class="date-input" value="${today}" onchange="checkExpiration(this)"></td>
-                <td contenteditable="true" onblur="updateModificationInfo(this)">Click to edit...</td>
-                <td><input type="date" class="date-input" onchange="checkExpiration(this)"></td>
-                <td class="last-modified">User - Just now</td>
-                <td><button class="delete-btn" onclick="deleteNoteFirebase(this)">Delete</button></td>
+            const note = document.createElement('div');
+            note.className = 'note';
+            note.innerHTML = `
+                <button class="delete-btn" onclick="deleteNote(this)">Delete</button>
+                <textarea placeholder="Write your note here..." oninput="saveNotes()"></textarea>
             `;
-            table.appendChild(newRow);
-            saveNoteToFirebase(newRow);
+            document.body.appendChild(note);
+            saveNotes();
         }
 
-        function saveNoteToFirebase(row) {
-            const note = {
-                startDate: row.querySelector('input[type="date"]').value,
-                description: row.querySelector('td[contenteditable="true"]').innerText,
-                expireDate: row.querySelectorAll('input[type="date"]').value,
-                lastModified: row.querySelector('.last-modified').innerText
-            };
-            db.collection("notes").add(note);
+        function deleteNote(button) {
+            const note = button.parentElement;
+            note.remove();
+            saveNotes();
         }
 
-        function updateModificationInfo(cell) {
-            const row = cell.parentElement;
-            const lastModifiedCell = row.querySelector('.last-modified');
-            const userName = prompt("Please enter your name:", "User");
-            if (userName) {
-                lastModifiedCell.textContent = `${userName} - ${new Date().toLocaleString()}`;
-                saveNoteToFirebase(row);
-            }
-        }
-
-        function checkExpiration(input) {
-            const row = input.parentElement.parentElement;
-            const expireDate = new Date(input.value);
-            const today = new Date();
-            const oneWeekFromNow = new Date(today);
-            oneWeekFromNow.setDate(today.getDate() + 7);
-            const oneWeekAfterExpiration = new Date(expireDate);
-            oneWeekAfterExpiration.setDate(expireDate.getDate() + 7);
-
-            row.classList.remove('expired', 'warning', 'safe', 'hidden');
-            if (today > oneWeekAfterExpiration) {
-                document.getElementById('hiddenNotesTable').appendChild(row);
-            } else if (expireDate < today) {
-                row.classList.add('expired');
-            } else if (expireDate <= oneWeekFromNow) {
-                row.classList.add('warning');
-            } else {
-                row.classList.add('safe');
-            }
-        }
-
-        function checkAllExpirations() {
-            document.querySelectorAll('.date-input').forEach(input => checkExpiration(input));
-        }
-
-        function deleteNoteFirebase(button) {
-            const row = button.parentElement.parentElement;
-            const noteId = row.getAttribute('data-id');
-            db.collection("notes").doc(noteId).delete().then(() => {
-                row.remove();
+        function saveNotes() {
+            const notes = [];
+            document.querySelectorAll('.note textarea').forEach(textarea => {
+                notes.push(textarea.value);
             });
+            localStorage.setItem('notes', JSON.stringify(notes));
         }
 
         function loadNotes() {
-            db.collection("notes").get().then((querySnapshot) => {
-                querySnapshot.forEach((doc) => {
-                    const note = doc.data();
-                    const newRow = document.createElement('tr');
-                    newRow.setAttribute('data-id', doc.id);
-                    newRow.innerHTML = `
-                        <td><input type="date" class="date-input" value="${note.startDate}" onchange="checkExpiration(this)"></td>
-                        <td contenteditable="true" onblur="updateModificationInfo(this)">${note.description}</td>
-                        <td><input type="date" class="date-input" value="${note.expireDate}" onchange="checkExpiration(this)"></td>
-                        <td class="last-modified">${note.lastModified}</td>
-                        <td><button class="delete-btn" onclick="deleteNoteFirebase(this)">Delete</button></td>
-                    `;
-                    document.getElementById('notesTable').appendChild(newRow);
-                });
+            const notes = JSON.parse(localStorage.getItem('notes') || '[]');
+            notes.forEach(noteContent => {
+                const note = document.createElement('div');
+                note.className = 'note';
+                note.innerHTML = `
+                    <button class="delete-btn" onclick="deleteNote(this)">Delete</button>
+                    <textarea placeholder="Write your note here..." oninput="saveNotes()">${noteContent}</textarea>
+                `;
+                document.body.appendChild(note);
             });
-        }
-
-        document.addEventListener('DOMContentLoaded', loadNotes);
-
-        function toggleHiddenNotes() {
-            const hiddenNotesSection = document.getElementById('hiddenNotesSection');
-            const collapseBtn = document.querySelector('.collapse-btn');
-            if (hiddenNotesSection.style.display === 'none') {
-                hiddenNotesSection.style.display = 'block';
-                collapseBtn.textContent = 'Hide Hidden Notes';
-            } else {
-                hiddenNotesSection.style.display = 'none';
-                collapseBtn.textContent = 'Show Hidden Notes';
-            }
         }
     </script>
 </body>
