@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes Table</title>
+    <style>
+        .add-note-btn { margin: 20px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { background-color: #f2f2f2; text-align: left; }
+        .date-input { width: 100%; padding: 5px; box-sizing: border-box; }
+        .expired { background-color: #ffcccc; color: black; }
+        .warning { background-color: #ffebcc; color: black; }
+        .safe { background-color: #ccffcc; color: black; }
+        .hidden { display: none; }
+        .delete-btn { background-color: #f44336; color: white; border: none; cursor: pointer; padding: 5px 10px; }
+        .collapse-btn { background-color: #4CAF50; color: white; border: none; cursor: pointer; padding: 5px 10px; margin-top: 20px; }
+    </style>
+</head>
+<body onload="checkAllExpirations()">
+    <button class="add-note-btn" onclick="addNote()">Add Note</button>
+    <table>
+        <thead>
+            <tr><th>Start Date</th><th>Description</th><th>Expire Date</th><th>Last Modified</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="notesTable">
+            <tr>
+                <td><input type="date" class="date-input" value="${new Date().toISOString().split('T')}" onchange="checkExpiration(this)"></td>
+                <td contenteditable="true" onblur="updateModificationInfo(this)">Don't forget to check your emails!</td>
+                <td><input type="date" class="date-input" onchange="checkExpiration(this)"></td>
+                <td class="last-modified">User - Just now</td>
+                <td><button class="delete-btn" onclick="deleteNote(this)">Delete</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <button class="collapse-btn" onclick="toggleHiddenNotes()">Show Hidden Notes</button>
+    <div id="hiddenNotesSection" style="display: none;">
+        <h2>Hidden Notes</h2>
+        <table>
+            <thead>
+                <tr><th>Start Date</th><th>Description</th><th>Expire Date</th><th>Last Modified</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="hiddenNotesTable"></tbody>
+        </table>
+    </div>
+
+    <script>
+        function addNote() {
+            const table = document.getElementById('notesTable');
+            const newRow = document.createElement('tr');
+            const today = new Date().toISOString().split('T');
+            newRow.innerHTML = `
+                <td><input type="date" class="date-input" value="${today}" onchange="checkExpiration(this)"></td>
+                <td contenteditable="true" onblur="updateModificationInfo(this)">Click to edit...</td>
+                <td><input type="date" class="date-input" onchange="checkExpiration(this)"></td>
+                <td class="last-modified">User - Just now</td>
+                <td><button class="delete-btn" onclick="deleteNote(this)">Delete</button></td>
+            `;
+            table.appendChild(newRow);
+        }
+
+        function updateModificationInfo(cell) {
+            const row = cell.parentElement;
+            const lastModifiedCell = row.querySelector('.last-modified');
+            const userName = prompt("Please enter your name:", "User");
+            if (userName) {
+                lastModifiedCell.textContent = `${userName} - ${new Date().toLocaleString()}`;
+            }
+        }
+
+        function checkExpiration(input) {
+            const row = input.parentElement.parentElement;
+            const expireDate = new Date(input.value);
+            const today = new Date();
+            const oneWeekFromNow = new Date(today);
+            oneWeekFromNow.setDate(today.getDate() + 7);
+            const oneWeekAfterExpiration = new Date(expireDate);
+            oneWeekAfterExpiration.setDate(expireDate.getDate() + 7);
+
+            row.classList.remove('expired', 'warning', 'safe', 'hidden');
+            if (today > oneWeekAfterExpiration) {
+                document.getElementById('hiddenNotesTable').appendChild(row);
+            } else if (expireDate < today) {
+                row.classList.add('expired');
+            } else if (expireDate <= oneWeekFromNow) {
+                row.classList.add('warning');
+            } else {
+                row.classList.add('safe');
+            }
+        }
+
+        function checkAllExpirations() {
+            document.querySelectorAll('.date-input').forEach(input => checkExpiration(input));
+        }
+
+        function deleteNote(button) {
+            const row = button.parentElement.parentElement;
+            row.remove();
+        }
+
+        function toggleHiddenNotes() {
+            const hiddenNotesSection = document.getElementById('hiddenNotesSection');
+            const collapseBtn = document.querySelector('.collapse-btn');
+            if (hiddenNotesSection.style.display === 'none') {
+                hiddenNotesSection.style.display = 'block';
+                collapseBtn.textContent = 'Hide Hidden Notes';
+            } else {
+                hiddenNotesSection.style.display = 'none';
+                collapseBtn.textContent = 'Show Hidden Notes';
+            }
+        }
+    </script>
+</body>
+</html>
