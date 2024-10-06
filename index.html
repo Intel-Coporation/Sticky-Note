@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sticky Notes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+        }
+        .note {
+            background-color: #ffeb3b;
+            width: 200px;
+            height: 200px;
+            margin: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .note textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: none;
+            resize: none;
+            font-size: 16px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .note .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            font-size: 14px;
+        }
+        .add-note-btn {
+            margin: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <button class="add-note-btn" onclick="addNote()">Add Note</button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadNotes);
+
+        function addNote() {
+            const note = document.createElement('div');
+            note.className = 'note';
+            note.innerHTML = `
+                <button class="delete-btn" onclick="deleteNote(this)">Delete</button>
+                <textarea placeholder="Write your note here..." oninput="saveNotes()"></textarea>
+            `;
+            document.body.appendChild(note);
+            saveNotes();
+        }
+
+        function deleteNote(button) {
+            const note = button.parentElement;
+            note.remove();
+            saveNotes();
+        }
+
+        function saveNotes() {
+            const notes = [];
+            document.querySelectorAll('.note textarea').forEach(textarea => {
+                notes.push(textarea.value);
+            });
+            localStorage.setItem('notes', JSON.stringify(notes));
+        }
+
+        function loadNotes() {
+            const notes = JSON.parse(localStorage.getItem('notes') || '[]');
+            notes.forEach(noteContent => {
+                const note = document.createElement('div');
+                note.className = 'note';
+                note.innerHTML = `
+                    <button class="delete-btn" onclick="deleteNote(this)">Delete</button>
+                    <textarea placeholder="Write your note here..." oninput="saveNotes()">${noteContent}</textarea>
+                `;
+                document.body.appendChild(note);
+            });
+        }
+    </script>
+</body>
+</html>
